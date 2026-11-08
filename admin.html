@@ -14,7 +14,27 @@
   const doc=await pdfjs.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
   const path=user.id+'/'+Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9_.-]/g,'_');
   out.textContent='2/3 · Subiendo '+(f.size/1048576).toFixed(1)+' MB. No cierres esta ventana…';
-  const {error:uploadError}=await s.storage.from('maison-magazines').upload(path,f,{contentType:'application/pdf',cacheControl:'3600',upsert:false});
+  let uploadError=null;
+  if(f.size>5*1024*1024){
+   const {default:tus}=await import('https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/+esm');
+   const {data:{session}}=await s.auth.getSession();
+   if(!session?.access_token)throw Error('La sesión caducó. Vuelve a iniciar sesión.');
+   await new Promise((resolve,reject)=>{
+    const uploader=new tus.Upload(f,{
+     endpoint:'https://opyfkkwgqzqjxhokkvrg.supabase.co/storage/v1/upload/resumable',
+     retryDelays:[0,1000,3000,5000,10000],
+     chunkSize:6*1024*1024,
+     uploadDataDuringCreation:true,
+     metadata:{bucketName:'maison-magazines',objectName:path,contentType:'application/pdf',cacheControl:'3600'},
+     headers:{authorization:'Bearer '+session.access_token,apikey:'sb_publishable_Xfg_h70wTwEnolWvH6Gelg_uNsEpNHz'},
+     onError:reject,onSuccess:resolve,
+     onProgress:(sent,total)=>out.textContent='2/3 · Subiendo revista: '+Math.round(sent/total*100)+'%'
+    });uploader.start();
+   });
+  }else{
+   const result=await s.storage.from('maison-magazines').upload(path,f,{contentType:'application/pdf',cacheControl:'3600',upsert:false});
+   uploadError=result.error;
+  }
   if(uploadError)throw Error('No se pudo subir el PDF: '+uploadError.message);
   const {data:mag,error:magError}=await s.from('mb_magazines').insert({brand,title,pdf_path:path,page_count:doc.numPages,status:'draft'}).select('id').single();
   if(magError)throw Error('El PDF se subió pero no se pudo registrar: '+magError.message);
