@@ -1,0 +1,40 @@
+name: Publish Maison Beauty product photographs
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/publish-product-images.yml'
+      - 'Maison_Beauty_V1.zip'
+permissions:
+  contents: write
+jobs:
+  publish-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract product images from existing catalog ZIP
+        run: |
+          python3 - <<'PY'
+          import zipfile, pathlib
+          path = pathlib.Path('Maison_Beauty_V1.zip')
+          if not path.exists():
+              raise SystemExit('Catalog ZIP missing')
+          with zipfile.ZipFile(path) as z:
+              images = [n for n in z.namelist() if '/assets/' in n and n.lower().endswith(('.png','.jpg','.webp'))]
+              if not images:
+                  raise SystemExit('No product images in ZIP')
+              pathlib.Path('assets').mkdir(exist_ok=True)
+              for name in images:
+                  target = pathlib.Path('assets') / pathlib.Path(name).name
+                  target.write_bytes(z.read(name))
+              print('Extracted',len(images),'images')
+          PY
+      - name: Commit images for GitHub Pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish original product photographs"
+            git push
+          fi
