@@ -46,14 +46,14 @@ function openCatalog(rec){recommended=rec;$('catalogTitle').textContent=rec?'Sel
 function fit(p){if(!recommended)return true;const cat=answers[1],aud=answers[2],budget=answers[3];return(cat==='Sorpréndeme'||p.cat===cat)&&(aud==='Para cualquiera'||p.audience===aud)&&(budget==='Sin límite'||(budget==='Hasta S/ 50'?p.price<=50:budget==='S/ 50 a 100'?p.price>=50&&p.price<=100:p.price>100))}
 function escapeHtml(t){return String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}async function loadMagazines(){try{const res=await fetch(MB_URL+'/rest/v1/mb_magazines?select=id,brand,title,pdf_path,page_count&status=eq.published&order=created_at.desc',{headers:{apikey:MB_KEY}});if(!res.ok)throw Error('No se pudieron cargar las revistas');magazines=await res.json();const ids=magazines.map(m=>m.id);if(ids.length){const pagesRes=await fetch(MB_URL+'/rest/v1/mb_magazine_pages?select=magazine_id,page_number,search_text&magazine_id=in.('+ids.join(',')+')&limit=10000',{headers:{apikey:MB_KEY}});if(!pagesRes.ok)throw Error('No se pudo consultar el índice');magPages=await pagesRes.json()}renderMagazineResults()}catch(e){console.warn(e)}}function renderMagazineResults(){
  const root=$('magResults');if(!root)return;
- const normalize=v=>String(v||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
- const q=normalize($('search').value.trim()),words=q.split(/\\s+/).filter(Boolean);
+ const normalize=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const q=normalize($('search').value.trim()),words=q.split(/\s+/).filter(Boolean);
  const brand=$('brandFilter').value,cat=answers[1];
  const scored=magPages.map(p=>{
   const m=magazines.find(x=>x.id===p.magazine_id);if(!m||(brand&&brand!==m.brand))return null;
   const t=normalize(p.search_text),raw=p.search_text||'';
-  const hasPrice=/(?:s\\s*\\/\\s*\\d|\\d[.,]\\d{2}\\s*(?:soles|s\\/))/i.test(raw);
-  const hasCode=/\\(\\s*\\d{5,9}\\s*\\)|\\b(?:cod(?:igo|\\.)?\\s*[:.]?\\s*\\d{5,9})/i.test(raw);
+  const hasPrice=/(?:s\s*\/\s*\d|\d[.,]\d{2}\s*(?:soles|s\/))/i.test(raw);
+  const hasCode=/\(\s*\d{5,9}\s*\)|\b(?:cod(?:igo|\.)?\s*[:.]?\s*\d{5,9})/i.test(raw);
   if(!hasPrice&&!hasCode)return null;
   if(words.length&&!words.every(w=>t.includes(w)))return null;
   if(!words.length&&!recommended)return null;
