@@ -59,11 +59,11 @@ const MB_URL='https://opyfkkwgqzqjxhokkvrg.supabase.co';
 const MB_KEY='sb_publishable_Xfg_h70wTwEnolWvH6Gelg_uNsEpNHz';
 async function loadPublishedCatalog(){
  try{
-  const response=await fetch(MB_URL+'/rest/v1/mb_products?select=id,brand,name,price,category,image_url,active&active=eq.true&order=created_at.desc',{headers:{apikey:MB_KEY,Authorization:'Bearer '+MB_KEY}});
+  const response=await fetch(MB_URL+'/rest/v1/mb_products?select=id,brand,name,price,regular_price,source_type,stock,offer_until,category,image_url,active&active=eq.true&order=created_at.desc',{headers:{apikey:MB_KEY,Authorization:'Bearer '+MB_KEY}});
   if(!response.ok)throw Error('Catálogo no disponible');
   const rows=await response.json();
   if(rows.length){
-   seed=rows.map(p=>({id:p.id,name:p.name,brand:p.brand,price:Number(p.price),cat:p.category||'Cuidado',audience:'Para cualquiera',img:p.image_url||''}));
+   seed=rows.filter(p=>p.source_type!=='stock'||(p.stock>0&&(!p.offer_until||new Date(p.offer_until)>=new Date()))).map(p=>({id:p.id,name:p.name,brand:p.brand,price:Number(p.price),regular_price:Number(p.regular_price)||0,source_type:p.source_type,stock:p.stock,offer:Number(p.regular_price)>Number(p.price),cat:p.category||'Cuidado',audience:'Para cualquiera',img:p.image_url||''}));
    const catSelect=document.getElementById('categoryFilter');
    const cats=[...new Set(seed.map(p=>p.cat))];
    catSelect.innerHTML='<option value="">Todas las categorías</option>'+cats.map(c=>'<option>'+c.replaceAll('&','&amp;').replaceAll('<','&lt;')+'</option>').join('');
