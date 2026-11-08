@@ -16,7 +16,8 @@
   out.textContent='2/3 · Subiendo '+(f.size/1048576).toFixed(1)+' MB. No cierres esta ventana…';
   let uploadError=null;
   if(f.size>5*1024*1024){
-   const {default:tus}=await import('https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/+esm');
+   const tus=await import('https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/+esm');
+   if(typeof tus.Upload!=='function')throw Error('No se pudo iniciar el cargador de archivos grandes.');
    const {data:{session}}=await s.auth.getSession();
    if(!session?.access_token)throw Error('La sesión caducó. Vuelve a iniciar sesión.');
    await new Promise((resolve,reject)=>{
